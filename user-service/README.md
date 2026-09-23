@@ -1,20 +1,20 @@
 # User service
 
-Internal PostgreSQL-backed student-account CRUD foundation for the food-delivery platform. Registration validation, secure password hashing, account persistence, and internal profile operations are implemented. There are no account HTTP routes, authentication, email verification, or activation workflows yet.
+Internal PostgreSQL-backed student-account CRUD foundation for the food-delivery platform. Registration validation, secure password hashing, account persistence, internal profile operations, and Auth0 JWT request authentication are implemented. The HTTP server exposes public `/health` and `/public` endpoints; account HTTP routes, email verification, and activation workflows are not implemented yet.
 
-Business-level deletion remains blocked until coordinated credit/errand checks and session revocation are implemented. End-to-end F1.1, F1.2, and F1.4 are therefore incomplete. Login/logout, sessions, password reset, role-based access enforcement, administrator/super-administrator management, bootstrap, and audit logging remain future work.
+Business-level deletion remains blocked until coordinated credit/errand checks and session revocation are implemented. End-to-end F1.1, F1.2, and F1.4 are therefore incomplete. Login UI/logout, account-state checks, password reset, administrator/super-administrator management, bootstrap, and audit logging remain future work. Auth0 issues access tokens; this service validates their RS256 signatures, issuer, audience, lifetime, and permissions claims.
 
 ## Structure
 
 ```text
 cmd/api/main.go          Application entry point
 internal/config/        Environment configuration
-internal/handler/       HTTP handler/router placeholder
+internal/handler/       HTTP handlers and router
 internal/service/       Internal student-account operations and future integrations
 internal/repository/    Persistence contracts and PostgreSQL adapter
 internal/auth/          Argon2id password hashing; future session/token contracts
 internal/email/         Email sender contract
-internal/middleware/    Authentication and authorization contracts
+internal/middleware/    Auth0 JWT authentication and authorization
 migrations/             Versioned account schema SQL
 Dockerfile              Multi-stage image build
 go.mod                  Module: user-service
@@ -100,7 +100,7 @@ go build ./...
 go run ./cmd/api
 ```
 
-The entry point prints a status notice and exits; it does not connect to PostgreSQL or listen on a port. `config.Load` requires `DATABASE_URL` and accepts optional `HTTP_ADDRESS` (default `:8080`, unused until HTTP wiring). `repository.Open` parses the URL and pings PostgreSQL with the caller's context; its errors omit credentials and driver details. Do not log configuration or credential input structs.
+The entry point loads `.env` when present, requires `DATABASE_URL`, `AUTH0_DOMAIN`, and `AUTH0_AUDIENCE`, then listens on `HTTP_ADDRESS` (default `:8080`). It does not connect to PostgreSQL yet because account HTTP handlers are not wired. `repository.Open` parses the URL and pings PostgreSQL with the caller's context; its errors omit credentials and driver details. Do not log configuration or credential input structs.
 
 Use a dedicated user-service database on PostgreSQL 16 or newer. Set `DATABASE_URL` through your environment/secret manager, then apply the initial migration once:
 
@@ -120,4 +120,4 @@ go test -count=1 ./...
 
 Without `TEST_DATABASE_URL`, PostgreSQL integration tests are skipped explicitly; unit tests still run. Each integration test creates and removes a randomly named isolated schema. Tests never fall back to `DATABASE_URL`, reset an existing schema/database, or require pre-applied migrations. Fixtures activate accounts only inside the isolated test schema; there is no production activation bypass. Integration coverage includes concurrent uniqueness, CRUD, guarded profile updates, blocked business deletion, and migration rollback/reapply.
 
-Build the container with `docker build -t user-service .`. It also prints the status notice and exits. HTTP wiring and deployment integration remain future work.
+Build the container with `docker build -t user-service .`. Supply `DATABASE_URL`, `AUTH0_DOMAIN`, and `AUTH0_AUDIENCE` when running it; `.env` is intended only for local development and is not copied into the image.

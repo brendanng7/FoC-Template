@@ -1,12 +1,23 @@
-// Package handler will adapt HTTP requests to user-service operations.
+// Package handler adapts HTTP requests to user-service operations.
 package handler
 
 import "net/http"
 
-// Handler reserves a place for routing and business-service dependencies.
-// It is not wired or registered with a server yet.
+// Handler owns the service's HTTP routes.
 type Handler struct {
 	Router *http.ServeMux
 }
 
-// TODO: Add routes, request validation, and response mapping.
+// New creates the public service endpoints. Account routes will be registered
+// here as their application workflows are implemented.
+func New() *Handler {
+	router := http.NewServeMux()
+	router.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	router.HandleFunc("GET /public", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("{\"service\":\"user-service\"}\n"))
+	})
+	return &Handler{Router: router}
+}

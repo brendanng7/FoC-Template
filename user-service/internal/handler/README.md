@@ -1,6 +1,6 @@
-# HTTP handlers — planned responsibilities
+# HTTP handlers
 
-Documentation only; no routes or request/response models are implemented.
+`GET /health` and `GET /public` are implemented as public endpoints. Account routes and request/response models are not implemented.
 
 | Requirements | Future HTTP responsibility |
 | --- | --- |
